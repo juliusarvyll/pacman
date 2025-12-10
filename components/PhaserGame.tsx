@@ -532,6 +532,7 @@ const PhaserGame = () => {
     setTouchButtonsActive(prev => ({ ...prev, [direction]: active }));
     const targetKey = direction === 'up' ? 'w' : direction === 'down' ? 's' : direction === 'left' ? 'a' : 'd';
     dispatchKey(targetKey, active ? 'keydown' : 'keyup');
+    console.log(`touch ${direction} => ${active ? 'down' : 'up'}`);
   };
 
   return (
