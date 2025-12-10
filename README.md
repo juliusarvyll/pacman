@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+![image](https://user-images.githubusercontent.com/47408756/159007940-8c4c44d3-c083-426d-8a18-da38d360ebc9.png)
 
-## Getting Started
+## Pokemon 2D Platformer
 
-First, run the development server:
+Built using Tiled and JavaScript, this game allows you to explore a vibrant and interactive world filled with detailed maps and smooth gameplay. Experience the charm of the Pokémon universe with updated graphics and the ability to move around and interact with various objects.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+<br>
+
+[Live Site](https://rohzzn.github.io/pokemon/)
+ 
+### Features
+
+- Detailed and intricate maps created using Tiled
+- Smooth gameplay thanks to JavaScript
+- Upgraded graphics for a more immersive experience
+- Interact with various objects in the world
+- Compatible with any web browser
+
+### Getting Started
+
+To get started, clone the repository and run the application on a local server. Then, open your web browser and navigate to the localhost where the application is running.
+
+```
+git clone https://github.com/rohzzn/pokemon.git
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- A web browser
+- A local server to run the application
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Built With
 
-## Learn More
+- Tiled
+- JavaScript
 
-To learn more about Next.js, take a look at the following resources:
+### Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+We welcome contributions to this project. To contribute, fork the repository, make your changes, and submit a pull request for review.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Disclaimer
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is not endorsed, sponsored or approved by Nintendo, Creatures Inc. or GAME FREAK inc. All trademarks and registered trademarks appearing on this application are the property of their respective owners.
