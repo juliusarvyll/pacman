@@ -486,10 +486,14 @@ const PhaserGame = () => {
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 1280,
-      height: 900,
       parent: "game-container",
       pixelArt: true,
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 960,
+        height: 720
+      },
       physics: {
         default: "arcade",
         arcade: {
@@ -523,9 +527,9 @@ const PhaserGame = () => {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="relative border-4 border-gray-700 rounded-lg overflow-hidden">
-        <div id="game-container" ref={gameRef} className="block" />
+    <div className="relative flex items-center justify-center min-h-screen bg-gray-900 px-4 py-8">
+      <div className="relative border-4 border-gray-700 rounded-lg overflow-hidden w-full max-w-[720px]">
+        <div id="game-container" ref={gameRef} className="block w-full" />
         {showPrompt && (
           <div className="pointer-events-none absolute inset-x-2 bottom-8 mx-auto w-auto max-w-[300px]">
             <div className="bg-black/85 border border-white/60 text-white text-sm font-mono px-5 py-3 rounded-lg shadow-xl backdrop-blur-sm">
