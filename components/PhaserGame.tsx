@@ -521,9 +521,17 @@ const PhaserGame = () => {
     };
   }, []);
 
+  const dispatchKey = (key: string, type: 'keydown' | 'keyup') => {
+    if (typeof window === 'undefined') return;
+    const event = new KeyboardEvent(type, { key, bubbles: true });
+    window.dispatchEvent(event);
+  };
+
   const handleTouchButton = (direction: TouchDirection, active: boolean) => {
     touchControlStateRef.current = { ...touchControlStateRef.current, [direction]: active };
     setTouchButtonsActive(prev => ({ ...prev, [direction]: active }));
+    const targetKey = direction === 'up' ? 'w' : direction === 'down' ? 's' : direction === 'left' ? 'a' : 'd';
+    dispatchKey(targetKey, active ? 'keydown' : 'keyup');
   };
 
   return (
