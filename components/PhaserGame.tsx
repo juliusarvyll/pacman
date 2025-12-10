@@ -3,11 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Phaser from 'phaser';
 
+type TouchDirection = 'up' | 'down' | 'left' | 'right';
+
 const PhaserGame = () => {
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptMessage, setPromptMessage] = useState('');
+  const [touchEnabled, setTouchEnabled] = useState(false);
+  const [touchButtonsActive, setTouchButtonsActive] = useState<Record<TouchDirection, boolean>>({
+    up: false,
+    down: false,
+    left: false,
+    right: false
+  });
+  const touchControlStateRef = useRef<Record<TouchDirection, boolean>>({
+    up: false,
+    down: false,
+    left: false,
+    right: false
+  });
 
   useEffect(() => {
     if (!gameRef.current) return;
