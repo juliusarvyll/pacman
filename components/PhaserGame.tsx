@@ -25,6 +25,10 @@ const PhaserGame = () => {
   });
 
   useEffect(() => {
+    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      setTouchEnabled(true);
+    }
     if (!gameRef.current) return;
 
     let cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -424,6 +428,14 @@ const PhaserGame = () => {
         return;
       }
       const speed = 175;
+      if (touchEnabled) {
+        const active = touchControlStateRef.current;
+        if (active.left) player.body.setVelocityX(-speed);
+        else if (active.right) player.body.setVelocityX(speed);
+        if (active.up) player.body.setVelocityY(-speed);
+        else if (active.down) player.body.setVelocityY(speed);
+        player.body.velocity.normalize().scale(speed);
+      }
       const prevVelocity = player.body.velocity.clone();
       player.body.setVelocity(0);
 
@@ -499,14 +511,46 @@ const PhaserGame = () => {
     };
   }, []);
 
+  const handleTouchButton = (direction: TouchDirection, active: boolean) => {
+    touchControlStateRef.current = { ...touchControlStateRef.current, [direction]: active };
+    setTouchButtonsActive(prev => ({ ...prev, [direction]: active }));
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
+    <div className="relative flex items-center justify-center min-h-screen bg-gray-900">
       <div className="relative border-4 border-gray-700 rounded-lg overflow-hidden">
         <div id="game-container" ref={gameRef} className="block" />
         {showPrompt && (
           <div className="pointer-events-none absolute inset-x-2 bottom-8 mx-auto w-auto max-w-[300px]">
             <div className="bg-black/85 border border-white/60 text-white text-sm font-mono px-5 py-3 rounded-lg shadow-xl backdrop-blur-sm">
               {promptMessage}
+            </div>
+          </div>
+        )}
+        {touchEnabled && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="pointer-events-auto absolute left-4 bottom-12 flex flex-col gap-2">
+              {['up', 'down', 'left', 'right'].map(direction => (
+                <button
+                  key={direction}
+                  onPointerDown={() => handleTouchButton(direction as TouchDirection, true)}
+                  onPointerUp={() => handleTouchButton(direction as TouchDirection, false)}
+                  onPointerLeave={() => handleTouchButton(direction as TouchDirection, false)}
+                  onTouchStart={e => {
+                    e.preventDefault();
+                    handleTouchButton(direction as TouchDirection, true);
+                  }}
+                  onTouchEnd={e => {
+                    e.preventDefault();
+                    handleTouchButton(direction as TouchDirection, false);
+                  }}
+                  className={`w-12 h-12 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-xs font-mono ${
+                    touchButtonsActive[direction as TouchDirection] ? 'bg-white/80 text-black' : ''
+                  }`}
+                >
+                  {direction.toUpperCase()}
+                </button>
+              ))}
             </div>
           </div>
         )}
