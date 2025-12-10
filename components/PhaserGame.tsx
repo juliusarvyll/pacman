@@ -428,38 +428,44 @@ const PhaserGame = () => {
         return;
       }
       const speed = 175;
-      if (touchEnabled) {
-        const active = touchControlStateRef.current;
-        if (active.left) player.body.setVelocityX(-speed);
-        else if (active.right) player.body.setVelocityX(speed);
-        if (active.up) player.body.setVelocityY(-speed);
-        else if (active.down) player.body.setVelocityY(speed);
-        player.body.velocity.normalize().scale(speed);
-      }
       const prevVelocity = player.body.velocity.clone();
       player.body.setVelocity(0);
 
+      const inputDirection = new Phaser.Math.Vector2(0, 0);
+      if (touchEnabled) {
+        const active = touchControlStateRef.current;
+        if (active.left) inputDirection.x = -1;
+        else if (active.right) inputDirection.x = 1;
+        if (active.up) inputDirection.y = -1;
+        else if (active.down) inputDirection.y = 1;
+      }
+
       if (cursors.left.isDown || wasdKeys.left.isDown) {
-        player.body.setVelocityX(-speed);
+        inputDirection.x = -1;
       } else if (cursors.right.isDown || wasdKeys.right.isDown) {
-        player.body.setVelocityX(speed);
+        inputDirection.x = 1;
       }
 
       if (cursors.up.isDown || wasdKeys.up.isDown) {
-        player.body.setVelocityY(-speed);
+        inputDirection.y = -1;
       } else if (cursors.down.isDown || wasdKeys.down.isDown) {
-        player.body.setVelocityY(speed);
+        inputDirection.y = 1;
       }
 
-      player.body.velocity.normalize().scale(speed);
+      if (inputDirection.lengthSq() > 0) {
+        const movement = inputDirection.clone().normalize().scale(speed);
+        player.body.setVelocity(movement.x, movement.y);
+      }
 
-      if (cursors.left.isDown || wasdKeys.left.isDown) {
+      const horizontal = inputDirection.x;
+      const vertical = inputDirection.y;
+      if (horizontal < 0) {
         player.anims.play("misa-left-walk", true);
-      } else if (cursors.right.isDown || wasdKeys.right.isDown) {
+      } else if (horizontal > 0) {
         player.anims.play("misa-right-walk", true);
-      } else if (cursors.up.isDown || wasdKeys.up.isDown) {
+      } else if (vertical < 0) {
         player.anims.play("misa-back-walk", true);
-      } else if (cursors.down.isDown || wasdKeys.down.isDown) {
+      } else if (vertical > 0) {
         player.anims.play("misa-front-walk", true);
       } else {
         player.anims.stop();
