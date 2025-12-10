@@ -52,6 +52,15 @@ const PhaserGame = () => {
     const START_MESSAGE = 'This is a game of memories';
     const TYPEWRITER_SPEED = 60;
     const START_HOLD_TIME = 1400;
+    const MOBILE_WIDTH_THRESHOLD = 820;
+    const DESKTOP_ZOOM = 2.0;
+
+    function computeZoom(width: number) {
+      if (width <= MOBILE_WIDTH_THRESHOLD) {
+        return Math.min(DESKTOP_ZOOM, Math.max(1.1, width / 640));
+      }
+      return DESKTOP_ZOOM;
+    }
 
     function initDialogUI(scene: Phaser.Scene) {
       const panelWidth = 360;
@@ -363,9 +372,11 @@ const PhaserGame = () => {
       const camera = this.cameras.main;
       camera.startFollow(player);
       camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-      const MOBILE_WIDTH_THRESHOLD = 820;
-      const baseZoom = window.innerWidth <= MOBILE_WIDTH_THRESHOLD ? Math.min(1.9, Math.max(1.1, window.innerWidth / 640)) : 2.0;
+      const baseZoom = computeZoom(this.scale.width);
       camera.setZoom(baseZoom);
+      this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+        camera.setZoom(computeZoom(gameSize.width));
+      });
 
       scoreText = this.add.text(16, 16, 'Score: 0', {
         font: "18px monospace",
