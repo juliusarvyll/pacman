@@ -548,21 +548,65 @@ const PhaserGame = () => {
         )}
         {touchEnabled && (
           <div className="absolute inset-0 pointer-events-none">
-            <div className="pointer-events-auto absolute left-4 bottom-12 flex flex-col gap-2">
-              {['up', 'down', 'left', 'right'].map(direction => (
+            <div className="pointer-events-auto absolute right-4 bottom-12 flex flex-col items-center gap-2">
+              <button
+                onPointerDown={() => handleTouchButton('up', true)}
+                onPointerUp={() => handleTouchButton('up', false)}
+                onPointerLeave={() => handleTouchButton('up', false)}
+                onTouchStart={(e) => { e.preventDefault(); handleTouchButton('up', true); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('up', false); }}
+                onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('up', false); }}
+                style={{ touchAction: 'none' }}
+                className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
+                  touchButtonsActive.up ? 'bg-white/80 text-black' : ''
+                }`}
+              >
+                ↑
+              </button>
+              <div className="flex gap-2">
                 <button
-                  key={direction}
-                  onPointerDown={() => handleTouchButton(direction as TouchDirection, true)}
-                  onPointerUp={() => handleTouchButton(direction as TouchDirection, false)}
-                  onPointerLeave={() => handleTouchButton(direction as TouchDirection, false)}
+                  onPointerDown={() => handleTouchButton('left', true)}
+                  onPointerUp={() => handleTouchButton('left', false)}
+                  onPointerLeave={() => handleTouchButton('left', false)}
+                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('left', true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('left', false); }}
+                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('left', false); }}
                   style={{ touchAction: 'none' }}
-                  className={`w-12 h-12 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-xs font-mono ${
-                    touchButtonsActive[direction as TouchDirection] ? 'bg-white/80 text-black' : ''
+                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
+                    touchButtonsActive.left ? 'bg-white/80 text-black' : ''
                   }`}
                 >
-                  {direction.toUpperCase()}
+                  ←
                 </button>
-              ))}
+                <button
+                  onPointerDown={() => handleTouchButton('down', true)}
+                  onPointerUp={() => handleTouchButton('down', false)}
+                  onPointerLeave={() => handleTouchButton('down', false)}
+                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('down', true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('down', false); }}
+                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('down', false); }}
+                  style={{ touchAction: 'none' }}
+                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
+                    touchButtonsActive.down ? 'bg-white/80 text-black' : ''
+                  }`}
+                >
+                  ↓
+                </button>
+                <button
+                  onPointerDown={() => handleTouchButton('right', true)}
+                  onPointerUp={() => handleTouchButton('right', false)}
+                  onPointerLeave={() => handleTouchButton('right', false)}
+                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('right', true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('right', false); }}
+                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('right', false); }}
+                  style={{ touchAction: 'none' }}
+                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
+                    touchButtonsActive.right ? 'bg-white/80 text-black' : ''
+                  }`}
+                >
+                  →
+                </button>
+              </div>
             </div>
           </div>
         )}
