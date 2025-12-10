@@ -555,8 +555,6 @@ const PhaserGame = () => {
                   onPointerDown={() => handleTouchButton(direction as TouchDirection, true)}
                   onPointerUp={() => handleTouchButton(direction as TouchDirection, false)}
                   onPointerLeave={() => handleTouchButton(direction as TouchDirection, false)}
-                  onTouchStart={() => handleTouchButton(direction as TouchDirection, true)}
-                  onTouchEnd={() => handleTouchButton(direction as TouchDirection, false)}
                   style={{ touchAction: 'none' }}
                   className={`w-12 h-12 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-xs font-mono ${
                     touchButtonsActive[direction as TouchDirection] ? 'bg-white/80 text-black' : ''
