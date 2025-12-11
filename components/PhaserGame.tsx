@@ -510,6 +510,11 @@ const PhaserGame = () => {
       audio: {
         disableWebAudio: true
       },
+      input: {
+        touch: {
+          capture: true
+        }
+      },
       scene: {
         preload,
         create,
