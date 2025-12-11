@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Phaser from 'phaser';
-
-type TouchDirection = 'up' | 'down' | 'left' | 'right';
+import { VirtualJoystick } from 'phaser-virtual-joystick';
 
 const PhaserGame = () => {
   const gameRef = useRef<HTMLDivElement>(null);
@@ -11,18 +10,6 @@ const PhaserGame = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptMessage, setPromptMessage] = useState('');
   const [touchEnabled, setTouchEnabled] = useState(false);
-  const [touchButtonsActive, setTouchButtonsActive] = useState<Record<TouchDirection, boolean>>({
-    up: false,
-    down: false,
-    left: false,
-    right: false
-  });
-  const touchControlStateRef = useRef<Record<TouchDirection, boolean>>({
-    up: false,
-    down: false,
-    left: false,
-    right: false
-  });
 
   useEffect(() => {
     const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -33,6 +20,7 @@ const PhaserGame = () => {
 
     let cursors: Phaser.Types.Input.Keyboard.CursorKeys;
     let wasdKeys: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
+    let joystick: VirtualJoystick;
     let player: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
     let scoreText: Phaser.GameObjects.Text;
     let score = 0;
@@ -412,6 +400,17 @@ const PhaserGame = () => {
         left: Phaser.Input.Keyboard.KeyCodes.A,
         right: Phaser.Input.Keyboard.KeyCodes.D
       }) as any;
+
+      // Create virtual joystick for mobile controls
+      if (touchEnabled) {
+        joystick = new VirtualJoystick({
+          scene: this,
+          x: 80,
+          y: this.cameras.main.height - 80,
+          radius: 60
+        });
+        this.add.existing(joystick);
+      }
     }
 
     function collectPokeball(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile, object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile) {
@@ -431,26 +430,34 @@ const PhaserGame = () => {
       const prevVelocity = player.body.velocity.clone();
       player.body.setVelocity(0);
 
-      const inputDirection = new Phaser.Math.Vector2(0, 0);
-      if (touchEnabled) {
-        const active = touchControlStateRef.current;
-        if (active.left) inputDirection.x = -1;
-        else if (active.right) inputDirection.x = 1;
-        if (active.up) inputDirection.y = -1;
-        else if (active.down) inputDirection.y = 1;
+      let joystickX = 0;
+      let joystickY = 0;
+
+      // Use joystick if available (mobile)
+      if (touchEnabled && joystick) {
+        joystickX = joystick.x;
+        joystickY = joystick.y;
       }
 
+      // Check keyboard input
+      let keyboardX = 0;
+      let keyboardY = 0;
       if (cursors.left.isDown || wasdKeys.left.isDown) {
-        inputDirection.x = -1;
+        keyboardX = -1;
       } else if (cursors.right.isDown || wasdKeys.right.isDown) {
-        inputDirection.x = 1;
+        keyboardX = 1;
+      }
+      if (cursors.up.isDown || wasdKeys.up.isDown) {
+        keyboardY = -1;
+      } else if (cursors.down.isDown || wasdKeys.down.isDown) {
+        keyboardY = 1;
       }
 
-      if (cursors.up.isDown || wasdKeys.up.isDown) {
-        inputDirection.y = -1;
-      } else if (cursors.down.isDown || wasdKeys.down.isDown) {
-        inputDirection.y = 1;
-      }
+      // Prioritize joystick over keyboard
+      const inputDirection = new Phaser.Math.Vector2(
+        joystickX !== 0 ? joystickX : keyboardX,
+        joystickY !== 0 ? joystickY : keyboardY
+      );
 
       if (inputDirection.lengthSq() > 0) {
         const movement = inputDirection.clone().normalize().scale(speed);
@@ -521,20 +528,6 @@ const PhaserGame = () => {
     };
   }, []);
 
-  const dispatchKey = (key: string, type: 'keydown' | 'keyup') => {
-    if (typeof window === 'undefined') return;
-    const event = new KeyboardEvent(type, { key, bubbles: true });
-    window.dispatchEvent(event);
-  };
-
-  const handleTouchButton = (direction: TouchDirection, active: boolean) => {
-    touchControlStateRef.current = { ...touchControlStateRef.current, [direction]: active };
-    setTouchButtonsActive(prev => ({ ...prev, [direction]: active }));
-    const targetKey = direction === 'up' ? 'ArrowUp' : direction === 'down' ? 'ArrowDown' : direction === 'left' ? 'ArrowLeft' : 'ArrowRight';
-    dispatchKey(targetKey, active ? 'keydown' : 'keyup');
-    console.log(`touch ${direction} => ${active ? 'down' : 'up'}`);
-  };
-
   return (
     <div className="relative flex items-center justify-center min-h-screen bg-gray-900 px-4 py-8">
       <div className="relative border-4 border-gray-700 rounded-lg overflow-hidden w-full max-w-[720px]">
@@ -543,70 +536,6 @@ const PhaserGame = () => {
           <div className="pointer-events-none absolute inset-x-2 bottom-8 mx-auto w-auto max-w-[300px]">
             <div className="bg-black/85 border border-white/60 text-white text-sm font-mono px-5 py-3 rounded-lg shadow-xl backdrop-blur-sm">
               {promptMessage}
-            </div>
-          </div>
-        )}
-        {touchEnabled && (
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="pointer-events-auto absolute right-4 bottom-12 flex flex-col items-center gap-2">
-              <button
-                onPointerDown={() => handleTouchButton('up', true)}
-                onPointerUp={() => handleTouchButton('up', false)}
-                onPointerLeave={() => handleTouchButton('up', false)}
-                onTouchStart={(e) => { e.preventDefault(); handleTouchButton('up', true); }}
-                onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('up', false); }}
-                onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('up', false); }}
-                style={{ touchAction: 'none' }}
-                className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
-                  touchButtonsActive.up ? 'bg-white/80 text-black' : ''
-                }`}
-              >
-                ↑
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onPointerDown={() => handleTouchButton('left', true)}
-                  onPointerUp={() => handleTouchButton('left', false)}
-                  onPointerLeave={() => handleTouchButton('left', false)}
-                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('left', true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('left', false); }}
-                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('left', false); }}
-                  style={{ touchAction: 'none' }}
-                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
-                    touchButtonsActive.left ? 'bg-white/80 text-black' : ''
-                  }`}
-                >
-                  ←
-                </button>
-                <button
-                  onPointerDown={() => handleTouchButton('down', true)}
-                  onPointerUp={() => handleTouchButton('down', false)}
-                  onPointerLeave={() => handleTouchButton('down', false)}
-                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('down', true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('down', false); }}
-                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('down', false); }}
-                  style={{ touchAction: 'none' }}
-                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
-                    touchButtonsActive.down ? 'bg-white/80 text-black' : ''
-                  }`}
-                >
-                  ↓
-                </button>
-                <button
-                  onPointerDown={() => handleTouchButton('right', true)}
-                  onPointerUp={() => handleTouchButton('right', false)}
-                  onPointerLeave={() => handleTouchButton('right', false)}
-                  onTouchStart={(e) => { e.preventDefault(); handleTouchButton('right', true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleTouchButton('right', false); }}
-                  onTouchCancel={(e) => { e.preventDefault(); handleTouchButton('right', false); }}
-                  style={{ touchAction: 'none' }}
-                  className={`w-14 h-14 rounded-full border-2 border-white/80 bg-gray-900/70 text-white text-sm font-mono flex items-center justify-center ${
-                    touchButtonsActive.right ? 'bg-white/80 text-black' : ''
-                  }`}
-                >
-                  →
-                </button>
-              </div>
             </div>
           </div>
         )}
