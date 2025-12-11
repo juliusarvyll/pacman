@@ -404,11 +404,10 @@ const PhaserGame = () => {
       // Create virtual joystick for mobile controls
       if (touchEnabled) {
         joystick = new VirtualJoystick({
-          scene: this,
-          x: 80,
-          y: this.cameras.main.height - 80,
-          radius: 60
+          scene: this
         });
+        joystick.x = 80;
+        joystick.y = this.cameras.main.height - 80;
         this.add.existing(joystick);
       }
     }
