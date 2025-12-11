@@ -13,6 +13,9 @@ const PhaserGame = () => {
 
   useEffect(() => {
     const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    console.log('Touch device detected:', isTouchDevice);
+    // Force enable touch for testing - remove this line for production
+    setTouchEnabled(true);
     if (isTouchDevice) {
       setTouchEnabled(true);
     }
@@ -377,18 +380,26 @@ const PhaserGame = () => {
       }) as any;
 
       // Create virtual joystick for mobile controls
+      console.log('Creating joystick, touchEnabled:', touchEnabled);
       if (touchEnabled) {
         joystick = new VirtualJoystick({
           scene: this
         });
-        // Position joystick relative to camera view
+        console.log('Joystick created:', joystick);
+        
+        // Position joystick in screen coordinates
+        const camera = this.cameras.main;
         joystick.x = 100;
-        joystick.y = this.cameras.main.height - 100;
+        joystick.y = camera.height - 100;
+        console.log('Joystick positioned at:', joystick.x, joystick.y);
+        
         this.add.existing(joystick);
         
-        // Ensure joystick is always visible
+        // Ensure joystick is always visible and on top
         joystick.setScrollFactor(0);
         joystick.setDepth(1000);
+        
+        console.log('Joystick setup complete');
       }
     }
 
