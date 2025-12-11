@@ -22,9 +22,6 @@ const PhaserGame = () => {
     let wasdKeys: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
     let joystick: VirtualJoystick;
     let player: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-    let scoreText: Phaser.GameObjects.Text;
-    let score = 0;
-    let collectables: Phaser.Physics.Arcade.Group;
     let dialogZones: { zone: Phaser.GameObjects.Zone; message: string }[] = [];
     let activeDialogMessage: string | null = null;
     let dialogContainer: Phaser.GameObjects.Container | null = null;
@@ -286,17 +283,6 @@ const PhaserGame = () => {
       this.load.atlas("atlas", `${assetPath}/killjoy.png`, `${assetPath}/killjoy.json`);
     }
 
-    function createRandomPokeballs(scene: Phaser.Scene, map: Phaser.Tilemaps.Tilemap) {
-      collectables = scene.physics.add.group();
-      for (let i = 0; i < 15; i++) {
-        const x = Phaser.Math.Between(100, map.widthInPixels - 100);
-        const y = Phaser.Math.Between(100, map.heightInPixels - 100);
-        const pokeball = collectables.create(x, y, 'flowers');
-        pokeball.setScale(0.5);
-        pokeball.setBounceY(0.2);
-        pokeball.setDepth(50);
-      }
-    }
 
     function create(this: Phaser.Scene) {
       const map = this.make.tilemap({ key: "map" });
@@ -326,10 +312,7 @@ const PhaserGame = () => {
         .setSize(30, 40)
         .setOffset(0, 24);
 
-      createRandomPokeballs(this, map);
-
       this.physics.add.collider(player, worldLayer!);
-      this.physics.add.overlap(player, collectables, collectPokeball, undefined, this);
 
       initDialogUI(this);
       setupObjectDialogZones(this, map, player);
@@ -370,16 +353,8 @@ const PhaserGame = () => {
         camera.setZoom(computeZoom(gameSize.width));
       });
 
-      scoreText = this.add.text(16, 16, 'Score: 0', {
-        font: "18px monospace",
-        color: "#000000",
-        padding: { x: 20, y: 10 },
-        backgroundColor: "#ffffff"
-      } as any)
-        .setScrollFactor(0)
-        .setDepth(100);
 
-      const helpText = this.add.text(16, 50, 'Arrow keys or WASD to move\nCollect the pokeballs!', {
+      const helpText = this.add.text(16, 16, 'Arrow keys or WASD to move', {
         font: "18px monospace",
         color: "#000000",
         padding: { x: 20, y: 10 },
@@ -406,18 +381,17 @@ const PhaserGame = () => {
         joystick = new VirtualJoystick({
           scene: this
         });
-        joystick.x = 80;
-        joystick.y = this.cameras.main.height - 80;
+        // Position joystick relative to camera view
+        joystick.x = 100;
+        joystick.y = this.cameras.main.height - 100;
         this.add.existing(joystick);
+        
+        // Ensure joystick is always visible
+        joystick.setScrollFactor(0);
+        joystick.setDepth(1000);
       }
     }
 
-    function collectPokeball(object1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile, object2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile) {
-      const pokeballSprite = object2 as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-      pokeballSprite.disableBody(true, true);
-      score += 10;
-      scoreText.setText('Score: ' + score);
-    }
 
     function update(this: Phaser.Scene, time: number, delta: number) {
       checkStartZone(this, player);
@@ -481,12 +455,6 @@ const PhaserGame = () => {
         else if (prevVelocity.y > 0) player.setTexture("atlas", "misa-front");
       }
 
-      collectables.children.iterate(function (child: Phaser.GameObjects.GameObject) {
-        if (child && (child as any).active) {
-          (child as any).rotation += 0.02;
-        }
-        return true;
-      });
       checkDialogZones(this, player);
     }
 
