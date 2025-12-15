@@ -2,28 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Phaser from 'phaser';
-import { VirtualJoystick } from 'phaser-virtual-joystick';
 
 const PhaserGame = () => {
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptMessage, setPromptMessage] = useState('');
-  const [touchEnabled, setTouchEnabled] = useState(false);
 
   useEffect(() => {
-    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    console.log('Touch device detected:', isTouchDevice);
-    // Force enable touch for testing - remove this line for production
-    setTouchEnabled(true);
-    if (isTouchDevice) {
-      setTouchEnabled(true);
-    }
     if (!gameRef.current) return;
 
-    let cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-    let wasdKeys: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
-    let joystick: VirtualJoystick;
     let player: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
     let dialogZones: { zone: Phaser.GameObjects.Zone; message: string }[] = [];
     let activeDialogMessage: string | null = null;
@@ -41,20 +29,33 @@ const PhaserGame = () => {
     let startTypewriterTimer: Phaser.Time.TimerEvent | null = null;
     let startResumeTimer: Phaser.Time.TimerEvent | null = null;
 
+    let currentDirection = new Phaser.Math.Vector2(0, 0);
+    let targetWorld: Phaser.Math.Vector2 | null = null;
+    let targetAxis: 'x' | 'y' | null = null;
+    let pointerDownScreen: Phaser.Math.Vector2 | null = null;
+    let pointerDownTime = 0;
+
+    const TARGET_ARRIVAL_PX = 6;
+
     const START_MESSAGE = 'This is a game of memories';
     const TYPEWRITER_SPEED = 60;
     const START_HOLD_TIME = 1400;
     const MOBILE_WIDTH_THRESHOLD = 820;
     const DESKTOP_ZOOM = 2.0;
 
+    const useInGameDialogUI = typeof window !== 'undefined' && window.innerWidth > MOBILE_WIDTH_THRESHOLD;
+
     function computeZoom(width: number) {
       if (width <= MOBILE_WIDTH_THRESHOLD) {
-        return Math.min(DESKTOP_ZOOM, Math.max(1.1, width / 640));
+        return Math.min(DESKTOP_ZOOM, Math.max(0.75, width / 820));
       }
       return DESKTOP_ZOOM;
     }
 
     function initDialogUI(scene: Phaser.Scene) {
+      if (!useInGameDialogUI) {
+        return;
+      }
       const panelWidth = 360;
       const panelHeight = 110;
       const padding = 10;
@@ -109,15 +110,15 @@ const PhaserGame = () => {
     }
 
     function runTypewriter(scene: Phaser.Scene, message: string, options: { autoHideMs?: number; onComplete?: () => void } = {}) {
-      if (!dialogContainer || !dialogText) {
-        return;
-      }
       const container = dialogContainer;
       const textObject = dialogText;
       activeDialogMessage = message;
-      container.setVisible(true);
-      container.setAlpha(1);
-      textObject.setText('');
+      let displayedText = '';
+      if (container && textObject) {
+        container.setVisible(true);
+        container.setAlpha(1);
+        textObject.setText('');
+      }
       stopTypewriter();
       setPromptMessage('');
       setShowPrompt(true);
@@ -125,19 +126,20 @@ const PhaserGame = () => {
         delay: TYPEWRITER_SPEED,
         loop: true,
         callback: () => {
-          const currentText = textObject.text;
-          const nextChar = message.charAt(currentText.length);
+          const nextChar = message.charAt(displayedText.length);
           if (nextChar) {
-            const nextText = currentText + nextChar;
-            textObject.setText(nextText);
-            setPromptMessage(nextText);
+            displayedText += nextChar;
+            if (textObject) {
+              textObject.setText(displayedText);
+            }
+            setPromptMessage(displayedText);
           }
-          if (textObject.text.length >= message.length) {
+          if (displayedText.length >= message.length) {
             stopTypewriter();
             if (options.autoHideMs) {
               dialogTimer?.remove(false);
               dialogTimer = scene.time.delayedCall(options.autoHideMs, () => {
-                container.setVisible(false);
+                container?.setVisible(false);
                 activeDialogMessage = null;
               });
             }
@@ -151,10 +153,7 @@ const PhaserGame = () => {
       if (startSequenceActive) {
         return;
       }
-      if (!dialogContainer || !dialogText) {
-        return;
-      }
-      if (activeDialogMessage === message && dialogContainer.visible) {
+      if (activeDialogMessage === message && dialogContainer?.visible) {
         return;
       }
       runTypewriter(scene, message);
@@ -175,9 +174,6 @@ const PhaserGame = () => {
     }
 
     function triggerStartSequence(scene: Phaser.Scene) {
-      if (!dialogContainer || !dialogText) {
-        return;
-      }
       if (startSequenceActive) {
         return;
       }
@@ -357,7 +353,7 @@ const PhaserGame = () => {
       });
 
 
-      const helpText = this.add.text(16, 16, 'Arrow keys or WASD to move', {
+      const helpText = this.add.text(16, 16, 'Click/tap to move • Swipe to change direction', {
         font: "18px monospace",
         color: "#000000",
         padding: { x: 20, y: 10 },
@@ -366,41 +362,61 @@ const PhaserGame = () => {
         .setScrollFactor(0)
         .setDepth(100);
 
-      if (!this.input.keyboard) {
-        console.error('Keyboard input not available');
-        return;
-      }
+      const STOP_RADIUS_PX = 18;
+      const SWIPE_THRESHOLD_PX = 24;
+      const MAX_TAP_DURATION_MS = 250;
 
-      cursors = this.input.keyboard.createCursorKeys();
-      wasdKeys = this.input.keyboard.addKeys({
-        up: Phaser.Input.Keyboard.KeyCodes.W,
-        down: Phaser.Input.Keyboard.KeyCodes.S,
-        left: Phaser.Input.Keyboard.KeyCodes.A,
-        right: Phaser.Input.Keyboard.KeyCodes.D
-      }) as any;
+      const setDirectionFromVector = (dx: number, dy: number) => {
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          currentDirection.set(dx >= 0 ? 1 : -1, 0);
+        } else {
+          currentDirection.set(0, dy >= 0 ? 1 : -1);
+        }
+      };
 
-      // Create virtual joystick for mobile controls
-      console.log('Creating joystick, touchEnabled:', touchEnabled);
-      if (touchEnabled) {
-        joystick = new VirtualJoystick({
-          scene: this
-        });
-        console.log('Joystick created:', joystick);
-        
-        // Position joystick in screen coordinates
-        const camera = this.cameras.main;
-        joystick.x = 100;
-        joystick.y = camera.height - 100;
-        console.log('Joystick positioned at:', joystick.x, joystick.y);
-        
-        this.add.existing(joystick);
-        
-        // Ensure joystick is always visible and on top
-        joystick.setScrollFactor(0);
-        joystick.setDepth(1000);
-        
-        console.log('Joystick setup complete');
-      }
+      this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        pointerDownScreen = new Phaser.Math.Vector2(pointer.x, pointer.y);
+        pointerDownTime = this.time.now;
+      });
+
+      this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        const down = pointerDownScreen;
+        pointerDownScreen = null;
+
+        const upScreen = new Phaser.Math.Vector2(pointer.x, pointer.y);
+        const elapsed = this.time.now - pointerDownTime;
+
+        if (down) {
+          const dx = upScreen.x - down.x;
+          const dy = upScreen.y - down.y;
+          const distSq = dx * dx + dy * dy;
+
+          if (distSq >= SWIPE_THRESHOLD_PX * SWIPE_THRESHOLD_PX) {
+            setDirectionFromVector(dx, dy);
+            targetWorld = null;
+            targetAxis = null;
+            return;
+          }
+
+          if (elapsed <= MAX_TAP_DURATION_MS) {
+            const tapWorldX = pointer.worldX;
+            const tapWorldY = pointer.worldY;
+            const playerDx = tapWorldX - player.x;
+            const playerDy = tapWorldY - player.y;
+
+            if (playerDx * playerDx + playerDy * playerDy <= STOP_RADIUS_PX * STOP_RADIUS_PX) {
+              currentDirection.set(0, 0);
+              targetWorld = null;
+              targetAxis = null;
+              return;
+            }
+
+            targetWorld = new Phaser.Math.Vector2(tapWorldX, tapWorldY);
+            currentDirection.set(0, 0);
+            targetAxis = Math.abs(playerDx) >= Math.abs(playerDy) ? 'x' : 'y';
+          }
+        }
+      });
     }
 
 
@@ -414,42 +430,40 @@ const PhaserGame = () => {
       const prevVelocity = player.body.velocity.clone();
       player.body.setVelocity(0);
 
-      let joystickX = 0;
-      let joystickY = 0;
+      if (targetWorld) {
+        const dx = targetWorld.x - player.x;
+        const dy = targetWorld.y - player.y;
+        const distSq = dx * dx + dy * dy;
 
-      // Use joystick if available (mobile)
-      if (touchEnabled && joystick) {
-        joystickX = joystick.x;
-        joystickY = joystick.y;
-      }
-
-      // Check keyboard input
-      let keyboardX = 0;
-      let keyboardY = 0;
-      if (cursors.left.isDown || wasdKeys.left.isDown) {
-        keyboardX = -1;
-      } else if (cursors.right.isDown || wasdKeys.right.isDown) {
-        keyboardX = 1;
-      }
-      if (cursors.up.isDown || wasdKeys.up.isDown) {
-        keyboardY = -1;
-      } else if (cursors.down.isDown || wasdKeys.down.isDown) {
-        keyboardY = 1;
-      }
-
-      // Prioritize joystick over keyboard
-      const inputDirection = new Phaser.Math.Vector2(
-        joystickX !== 0 ? joystickX : keyboardX,
-        joystickY !== 0 ? joystickY : keyboardY
-      );
-
-      if (inputDirection.lengthSq() > 0) {
-        const movement = inputDirection.clone().normalize().scale(speed);
+        if (distSq <= TARGET_ARRIVAL_PX * TARGET_ARRIVAL_PX) {
+          targetWorld = null;
+          targetAxis = null;
+          player.body.setVelocity(0);
+        } else {
+          if (targetAxis === 'x') {
+            if (Math.abs(dx) <= TARGET_ARRIVAL_PX) {
+              targetAxis = 'y';
+              player.body.setVelocity(0, dy >= 0 ? speed : -speed);
+            } else {
+              player.body.setVelocity(dx >= 0 ? speed : -speed, 0);
+            }
+          } else {
+            if (Math.abs(dy) <= TARGET_ARRIVAL_PX) {
+              targetAxis = 'x';
+              player.body.setVelocity(dx >= 0 ? speed : -speed, 0);
+            } else {
+              player.body.setVelocity(0, dy >= 0 ? speed : -speed);
+            }
+          }
+        }
+      } else if (currentDirection.lengthSq() > 0) {
+        const movement = currentDirection.clone().normalize().scale(speed);
         player.body.setVelocity(movement.x, movement.y);
       }
 
-      const horizontal = inputDirection.x;
-      const vertical = inputDirection.y;
+      const velocity = player.body.velocity;
+      const horizontal = velocity.x;
+      const vertical = velocity.y;
       if (horizontal < 0) {
         player.anims.play("misa-left-walk", true);
       } else if (horizontal > 0) {
@@ -469,15 +483,17 @@ const PhaserGame = () => {
       checkDialogZones(this, player);
     }
 
+    const initialWidth = gameRef.current.clientWidth || window.innerWidth;
+    const initialHeight = gameRef.current.clientHeight || window.innerHeight;
+
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       parent: "game-container",
       pixelArt: true,
       scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 960,
-        height: 720
+        mode: Phaser.Scale.RESIZE,
+        width: initialWidth,
+        height: initialHeight
       },
       physics: {
         default: "arcade",
@@ -512,9 +528,9 @@ const PhaserGame = () => {
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gray-900 px-4 py-8">
-      <div className="relative border-4 border-gray-700 rounded-lg overflow-hidden w-full max-w-[720px]">
-        <div id="game-container" ref={gameRef} className="block w-full" />
+    <div className="fixed inset-0 bg-gray-900 overflow-hidden">
+      <div className="relative w-full h-full">
+        <div id="game-container" ref={gameRef} className="block w-full h-full" />
         {showPrompt && (
           <div className="pointer-events-none absolute inset-x-2 bottom-8 mx-auto w-auto max-w-[300px]">
             <div className="bg-black/85 border border-white/60 text-white text-sm font-mono px-5 py-3 rounded-lg shadow-xl backdrop-blur-sm">
