@@ -313,6 +313,11 @@ const PhaserGame = () => {
 
       this.physics.add.collider(player, worldLayer!);
 
+      this.physics.world.on('worldstep', () => {
+        checkStartZone(this, player);
+        checkDialogZones(this, player);
+      });
+
       initDialogUI(this);
       setupObjectDialogZones(this, map, player);
       setupStartZone(this, map);
@@ -421,7 +426,6 @@ const PhaserGame = () => {
 
 
     function update(this: Phaser.Scene, time: number, delta: number) {
-      checkStartZone(this, player);
       if (movementPaused) {
         player.body.setVelocity(0);
         return;
@@ -479,8 +483,6 @@ const PhaserGame = () => {
         else if (prevVelocity.y < 0) player.setTexture("atlas", "misa-back");
         else if (prevVelocity.y > 0) player.setTexture("atlas", "misa-front");
       }
-
-      checkDialogZones(this, player);
     }
 
     const initialWidth = gameRef.current.clientWidth || window.innerWidth;
