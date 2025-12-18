@@ -205,12 +205,12 @@ const PhaserGame = () => {
 
     function setupObjectDialogZones(scene: Phaser.Scene, map: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody) {
       const dialogTargets: { name: string; message: string }[] = [
-        { name: 'curb1', message: 'Curb: Watch your step—these edges are sneaky.' },
-        { name: 'alfresco', message: 'Alfresco: Smells of charcoal and indie beats.' },
-        { name: 'ramen', message: 'Ramen: Slurp-worthy noodles await nearby.' },
-        { name: 'carig', message: 'Carig: Traffic and neon blur in puddle reflections.' },
-        { name: 'bonchon', message: 'Bonchon: Crunchy wings call your name.' },
-        { name: 'flowers', message: 'Flowers: Petals tremble when you walk close.' }
+        { name: 'curb1', message: 'yep, you hit that curb cause you were looking at me.' },
+        { name: 'alfresco', message: 'our first "date" date. you asked me a lot of questions about me which surprised me. I had so much fun knowing you and letting you know me.' },
+        { name: 'ramen', message: "it was a rainy day, and you didn't want to get under my umbrella. What a stubborn independent woman." },
+        { name: 'carig', message: "We went out on a lot of dates recently and I couldn't make the map for it. This is where you taught me how to drive. Parked at 7/11 and ate together in your car, and where we kissed. It was so memorable for me I couldn't stop smiling when you dropped me off." },
+        { name: 'bonchon', message: "Another memorable date with you. You took me to your go-to place and we yapped a lot." },
+        { name: 'flowers', message: 'I made you your very own flower garden. It may not look good but I hope the real me brought his own set of flowers.' }
       ];
 
       dialogTargets.forEach(target => {
@@ -275,6 +275,14 @@ const PhaserGame = () => {
       }
     }
 
+    function refreshZoneOverlaps(scene: Phaser.Scene) {
+      if (!player) {
+        return;
+      }
+      checkStartZone(scene, player);
+      checkDialogZones(scene, player);
+    }
+
     function preload(this: Phaser.Scene) {
       const assetPath = "/game";
       this.load.image("tiles", `${assetPath}/32px-pokemoni.png`);
@@ -314,8 +322,7 @@ const PhaserGame = () => {
       this.physics.add.collider(player, worldLayer!);
 
       this.physics.world.on('worldstep', () => {
-        checkStartZone(this, player);
-        checkDialogZones(this, player);
+        refreshZoneOverlaps(this);
       });
 
       initDialogUI(this);
@@ -400,6 +407,7 @@ const PhaserGame = () => {
             setDirectionFromVector(dx, dy);
             targetWorld = null;
             targetAxis = null;
+            refreshZoneOverlaps(this);
             return;
           }
 
@@ -413,12 +421,14 @@ const PhaserGame = () => {
               currentDirection.set(0, 0);
               targetWorld = null;
               targetAxis = null;
+              refreshZoneOverlaps(this);
               return;
             }
 
             targetWorld = new Phaser.Math.Vector2(tapWorldX, tapWorldY);
             currentDirection.set(0, 0);
             targetAxis = Math.abs(playerDx) >= Math.abs(playerDy) ? 'x' : 'y';
+            refreshZoneOverlaps(this);
           }
         }
       });
@@ -443,6 +453,7 @@ const PhaserGame = () => {
           targetWorld = null;
           targetAxis = null;
           player.body.setVelocity(0);
+          refreshZoneOverlaps(this);
         } else {
           if (targetAxis === 'x') {
             if (Math.abs(dx) <= TARGET_ARRIVAL_PX) {
